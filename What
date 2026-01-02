@@ -1,0 +1,186 @@
+local ProtectedUsers = {
+	["1il5f"] = true,
+	["1il5i"] = true,
+	["sj3zx"] = true,
+	["awr_9351156"] = true,
+	["eyad51533"] = true,
+	["ababahbada"] = true,
+	["eyad51533_bot"] = true,
+	["eyad51533_bot1"] = true,
+	["eyad51533_bot123456"] = true,
+	["Rx22177"] = true,
+	["awr_9351156BOT"] = true,
+	["Tx_3a"] = true,
+	["nanMrNoHackk"] = true,
+	["volex37"] = true,
+	["KWT_20082"] = true,
+	["bot_fraksh1v3"] = true,
+	["moonwe80"] = true
+}
+
+-----------------------------------------------------
+-- التكست بوكس
+-----------------------------------------------------
+local NickTextBox = NickTextBox or script.Parent:FindFirstChild("NickTextBox")
+
+-----------------------------------------------------
+-- دالة إظهار رسالة حماية
+-----------------------------------------------------
+local function ShowProtectedMessage(username)
+	local gui = Instance.new("ScreenGui", game.CoreGui)
+	gui.ResetOnSpawn = false
+
+	local baseWidth = 200
+	local extraWidth = math.clamp(#username*8,0,200)
+	local frameWidth = baseWidth + extraWidth
+
+	local frame = Instance.new("Frame", gui)
+	frame.Size = UDim2.new(0, frameWidth,0,70)
+	frame.Position = UDim2.new(1, frameWidth,1,-120)
+	frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+	frame.BackgroundTransparency = 0.4
+	frame.BorderSizePixel = 0
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+
+	local icon = Instance.new("ImageLabel", frame)
+	icon.Size = UDim2.new(0,55,0,55)
+	icon.Position = UDim2.new(0,8,0.5,-27)
+	icon.BackgroundTransparency = 1
+	icon.Image = "rbxassetid://13722469288"
+
+	local txt = Instance.new("TextLabel", frame)
+	txt.Size = UDim2.new(1, -70,1,0)
+	txt.Position = UDim2.new(0, 68,0,0)
+	txt.BackgroundTransparency = 1
+	txt.Font = Enum.Font.GothamBold
+	txt.TextSize = 18
+	txt.TextColor3 = Color3.fromRGB(255,255,255)
+	txt.TextWrapped = true
+	txt.Text = "الاعب ("..username..") محمي من مطور السكربت"
+
+	local gradient = Instance.new("UIGradient", txt)
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(180,180,180)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(180,180,180))
+	})
+	gradient.Offset = Vector2.new(-1,0)
+
+	local tweenGlow = TweenService:Create(
+		gradient,
+		TweenInfo.new(1.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true),
+		{Offset = Vector2.new(1,0)}
+	)
+	tweenGlow:Play()
+
+	TweenService:Create(
+		frame,
+		TweenInfo.new(0.35, Enum.EasingStyle.Quad),
+		{Position = UDim2.new(1,-frameWidth,1,-120)}
+	):Play()
+
+	task.delay(7,function()
+		local out = TweenService:Create(
+			frame,
+			TweenInfo.new(0.35, Enum.EasingStyle.Quad),
+			{Position = UDim2.new(1, frameWidth,1,-120)}
+		)
+		out:Play()
+		out.Completed:Connect(function()
+			gui:Destroy()
+		end)
+	end)
+end
+
+-----------------------------------------------------
+-- هل اللاعب موجود في السيرفر؟
+-----------------------------------------------------
+local function IsProtectedUserInServer(name)
+	for _,plr in ipairs(Players:GetPlayers()) do
+		if plr.Name:lower() == name:lower() then
+			return true
+		end
+	end
+	return false
+end
+
+-----------------------------------------------------
+-- فحص منع الإدخال
+-----------------------------------------------------
+local function ShouldBlockInput(input)
+	if input == "" then return false end
+	input = input:lower()
+
+	-- ✨ يمنع فقط من حرفين وفوق
+	if #input < 2 then return false end
+
+	local blocked = false
+
+	for username,_ in pairs(ProtectedUsers) do
+		if IsProtectedUserInServer(username) then
+
+			local plr = Players:FindFirstChild(username)
+			local unameLower = username:lower()
+
+			-- ✨ الفحص الجديد (يمنع أي جزء من الاسم)
+			if unameLower:find(input) then
+				ShowProtectedMessage(username)
+				blocked = true
+			end
+
+			if plr and plr.DisplayName:lower():find(input) then
+				ShowProtectedMessage(username)
+				blocked = true
+			end
+		end
+	end
+
+	return blocked
+end
+
+-----------------------------------------------------
+-- حماية التكست بوكس
+-----------------------------------------------------
+if NickTextBox then
+	NickTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+		local txt = NickTextBox.Text
+		if ShouldBlockInput(txt) then
+			NickTextBox.Text = ""
+		end
+	end)
+end
+
+-----------------------------------------------------
+-- حماية الاستهداف الخارجي
+-----------------------------------------------------
+_G.IsProtected = function(target)
+	if not target then return false end
+	target = target:lower()
+
+	-- ✨ يمنع فقط من حرفين وفوق
+	if #target < 2 then return false end
+
+	local blocked = false
+
+	for uname,_ in pairs(ProtectedUsers) do
+		if IsProtectedUserInServer(uname) then
+
+			if uname:lower():find(target) then
+				ShowProtectedMessage(uname)
+				blocked = true
+			end
+
+			local pl = Players:FindFirstChild(uname)
+			if pl and pl.DisplayName:lower():find(target) then
+				ShowProtectedMessage(uname)
+				blocked = true
+			end
+		end
+	end
+
+	return blocked
+end
+
+_G.ProtectToolClick = function(target)
+	return _G.IsProtected(target)
+end
